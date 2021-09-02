@@ -18,31 +18,44 @@ HEADERS = {
     'cookie': 'PHPSESSID=9be459cb04bb5b20d3513cd714c53504',
 }
 
+
 def get_response(href):
     return requests.get(href, headers=HEADERS)
 
+
 def get_teams(page):
-    return [team.text for team in page.find_all('h2')[:2]]
+    countries = [div.text for div in page.find_all('div', {'class': 'txt-subtitle'})[2:]]
+    teams = [team.text for team in page.find_all('h2')[:2]]
+    return [{'team': team, 'county': country} for team, country in zip(teams, countries)]
+
 
 def get_match(response):
-    
     soup = bs4.BeautifulSoup(response.text, features="html.parser")
-    
-    match = {
-    'teams': get_teams(soup),
-    'maps': get_maps(soup)
+    return {
+        'teams': get_teams(soup),
+        'maps': get_maps(soup),
+        'location': get_location(soup)
     }
-    return match
+
+
+def get_location(page):
+    icons = page.find('ul', {'class':'widget-icon-info widget-icon-info-50'}).find_all('li')
+    for li in icons:
+        if li.find('i', {'class': 'icon-location'}):
+            return li.text.split(':')[1]
+
 
 def get_maps(page):
     maps = []
     maps_soup = page.find_all("div", {"class": "content-match-sub-heroes"})
     for map_soup in maps_soup:
-        maps.append({'bans': get_heroes(map_soup, stage='ban'),
-                     'picks': get_heroes(map_soup),
-                     'winner': get_winner(map_soup)
-                    }) 
+        maps.append({
+            'bans': get_heroes(map_soup, stage='ban'),
+            'picks': get_heroes(map_soup),
+            'winner': get_winner(map_soup),
+        }) 
     return maps
+
 
 def get_winner(map_page):
     for i, team in enumerate(map_page.find_all("h3")):
@@ -50,6 +63,7 @@ def get_winner(map_page):
         if icon:
             return i
 
+        
 def get_heroes(page, stage='pick'):
     picks = {0: [], 1: []}
     picks_soup = page.find_all("ul", {"class": f"content-match-sub-{stage}s"})
