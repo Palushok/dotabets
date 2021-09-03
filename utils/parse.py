@@ -23,26 +23,44 @@ def get_response(href):
     return requests.get(href, headers=HEADERS)
 
 
+def get_match_links(pages):
+    '''
+    Params: pages (List[str]) - page indexes on main page
+    
+    Returns: List[str] - list of link to each match
+    '''
+    href = 'https://www.joindota.com/ajax/list_load?name=matches_finished&page={}&a1=&devmode=1&language=en'
+    links = []
+    for p in pages:
+        res = get_response(href.format(p))
+        soup = bs4.BeautifulSoup(res.text)
+        links_on_page = set([x['href'] for x in soup.find_all('a', href=True)])
+        for link in links_on_page:
+            match_link = 'https://' + link[12:-2].replace('\\/', '//')
+            links.append(match_link)
+    return links
+
+
+def get_match(response):
+    soup = bs4.BeautifulSoup(response.text, features="html.parser")
+    maps = get_maps(soup)
+    if len(maps): 
+        return {
+            'teams': get_teams(soup),
+            'maps': maps,
+            'location': get_location(soup),
+            'date': get_date(soup),
+        }
+
+
 def get_teams(page):
     countries = [div.text for div in page.find_all('div', {'class': 'txt-subtitle'})[2:]]
     teams = [team.text for team in page.find_all('h2')[:2]]
     return [{'team': team, 'county': country} for team, country in zip(teams, countries)]
 
 
-def get_match(response):
-    soup = bs4.BeautifulSoup(response.text, features="html.parser")
-    return {
-        'teams': get_teams(soup),
-        'maps': get_maps(soup),
-        'location': get_location(soup)
-    }
-
-
-def get_location(page):
-    icons = page.find('ul', {'class':'widget-icon-info widget-icon-info-50'}).find_all('li')
-    for li in icons:
-        if li.find('i', {'class': 'icon-location'}):
-            return li.text.split(':')[1]
+def get_date(page):
+    return page.find('span', {'class': 'tztime'}).text.split(' ')[0]
 
 
 def get_maps(page):
@@ -55,6 +73,14 @@ def get_maps(page):
             'winner': get_winner(map_soup),
         }) 
     return maps
+
+
+def get_location(page):
+    icons = page.find('ul', {'class':'widget-icon-info widget-icon-info-50'}).find_all('li')
+    for li in icons:
+        if li.find('i', {'class': 'icon-location'}):
+            return li.text.split(':')[1]
+
 
 
 def get_winner(map_page):
