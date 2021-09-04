@@ -1,6 +1,7 @@
 import requests
 import bs4
 
+
 HEADERS = {
     'authority': 'www.joindota.com',
     'cache-control': 'max-age=0',
@@ -80,7 +81,6 @@ def get_location(page):
     for li in icons:
         if li.find('i', {'class': 'icon-location'}):
             return li.text.split(':')[1]
-
 
 
 def get_winner(map_page):
