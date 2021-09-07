@@ -13,6 +13,7 @@ def json_to_dataframe(data):
         country_0 = teams[0]['county']
         team_1 = teams[1]['team']
         country_1 = teams[1]['county']
+        date = match['date']
         for game in match['maps']:
             picks_0 = game['picks'][0]
             picks_1 = game['picks'][1]
@@ -21,6 +22,7 @@ def json_to_dataframe(data):
             winner = game['winner']
             data_dict[idx] = {
                 'location': location,
+                'date': date,
                 'team_0': team_0,
                 'team_1': team_1,
                 'country_0': country_0,
@@ -32,6 +34,10 @@ def json_to_dataframe(data):
                 'winner': winner
             }
             idx += 1
-
+    
     df = pd.DataFrame.from_dict(data_dict, orient='index')
+    df = df[df.picks_0.apply(lambda x: '' not in x)].reset_index(drop=True)
     return df
+
+def default_name(name):
+    return '-'.join(name.split(' ')).lower()
